@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional
 import json
 import asyncio
 from models import ResearchQuery, WorkflowResult, WorkflowStatus
+from agent_factory import AgentFactory
 
 app = FastAPI(title="Quanta AI Scientist API", version="1.0.0")
 
@@ -16,6 +17,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize AgentFactory
+agent_factory = AgentFactory()
 
 # Response models
 class WorkflowResponse(BaseModel):
@@ -100,10 +104,14 @@ async def api_info():
             "health": "GET /health - Health check",
             "submit_research": "POST /api/research/submit - Submit research query",
             "workflow_status": "GET /api/workflow/{workflow_id}/status - Get workflow status",
+            "agents_status": "GET /api/agents/status - Get all agents status",
+            "agent_status": "GET /api/agents/{agent_type}/status - Get specific agent status",
+            "initialize_agent": "POST /api/agents/{agent_type}/initialize - Initialize specific agent",
             "websocket": "WS /ws/{client_id} - Real-time updates",
             "api_info": "GET /api/info - This endpoint"
         },
-        "agents": ["Research", "Data", "Experiment", "Critic", "Visualization"]
+        "agents": ["Research", "Data", "Experiment", "Critic", "Visualization"],
+        "strands_sdk": "Integrated with Strands Agents SDK v1.10.0"
     }
 
 @app.post("/api/research/submit", response_model=WorkflowResponse)
@@ -151,6 +159,73 @@ async def websocket_status():
         "status": "operational",
         "endpoint": "/ws/{client_id}"
     }
+
+@app.get("/api/agents/status")
+async def get_all_agents_status():
+    """Get status of all agents"""
+    try:
+        statuses = agent_factory.get_all_agent_statuses()
+        return {
+            "status": "success",
+            "agents": statuses,
+            "total_agents": len(statuses),
+            "timestamp": asyncio.get_event_loop().time()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get agent statuses: {str(e)}")
+
+@app.get("/api/agents/{agent_type}/status")
+async def get_agent_status(agent_type: str):
+    """Get status of a specific agent"""
+    try:
+        status = agent_factory.get_agent_status(agent_type)
+        return {
+            "status": "success",
+            "agent": status,
+            "timestamp": asyncio.get_event_loop().time()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get agent status: {str(e)}")
+
+@app.post("/api/agents/{agent_type}/initialize")
+async def initialize_agent(agent_type: str):
+    """Initialize a specific agent"""
+    try:
+        agent_creators = {
+            "research": agent_factory.create_research_agent,
+            "data": agent_factory.create_data_agent,
+            "experiment": agent_factory.create_experiment_agent,
+            "critic": agent_factory.create_critic_agent,
+            "visualization": agent_factory.create_visualization_agent
+        }
+        
+        if agent_type not in agent_creators:
+            raise HTTPException(status_code=400, detail=f"Unknown agent type: {agent_type}")
+        
+        # Create the agent
+        agent = agent_creators[agent_type]()
+        
+        # Get the updated status
+        status = agent_factory.get_agent_status(agent_type)
+        
+        # Broadcast agent initialization to connected clients
+        await manager.broadcast_status({
+            "type": "agent_initialized",
+            "agent_type": agent_type,
+            "agent_name": agent.name,
+            "status": "ready",
+            "message": f"{agent.name} has been initialized and is ready",
+            "timestamp": asyncio.get_event_loop().time()
+        })
+        
+        return {
+            "status": "success",
+            "message": f"{agent_type.capitalize()} agent initialized successfully",
+            "agent": status,
+            "timestamp": asyncio.get_event_loop().time()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to initialize agent: {str(e)}")
 
 async def simulate_workflow_progress(workflow_id: str, user_id: str):
     """Simulate workflow progress for testing WebSocket functionality"""

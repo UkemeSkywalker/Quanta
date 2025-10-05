@@ -135,21 +135,29 @@ export default function WorkflowProgress({
             )}
 
             {/* Agent Status Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3">
                 {agents.map((agent) => (
                     <div 
                         key={agent.name}
-                        className={`p-3 rounded-lg border transition-all duration-300 ${getAgentStatusColor(agent.status)}`}
+                        className={`p-2 sm:p-3 rounded-lg border transition-all duration-300 ${getAgentStatusColor(agent.status)}`}
                     >
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center space-x-2">
-                                <span className="text-lg">{agent.icon}</span>
-                                <span className="font-medium text-sm">{agent.name}</span>
+                        <div className="flex items-center justify-between mb-1 sm:mb-2">
+                            <div className="flex items-center space-x-1 sm:space-x-2 min-w-0 flex-1">
+                                <span className="text-sm sm:text-lg flex-shrink-0">{agent.icon}</span>
+                                <span className="font-medium text-xs sm:text-sm truncate">{agent.name}</span>
                             </div>
-                            <span className="text-lg">{getAgentStatusIcon(agent.status)}</span>
+                            <span className="text-sm sm:text-lg flex-shrink-0 ml-1">{getAgentStatusIcon(agent.status)}</span>
                         </div>
-                        <p className="text-xs opacity-80 line-clamp-2">
+                        <p className="text-xs opacity-80 hidden sm:block" style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                        }}>
                             {agent.message}
+                        </p>
+                        <p className="text-xs opacity-80 truncate sm:hidden">
+                            {agent.message.length > 15 ? agent.message.slice(0, 15) + '...' : agent.message}
                         </p>
                     </div>
                 ))}

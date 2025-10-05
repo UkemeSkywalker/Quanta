@@ -5,6 +5,7 @@ import ResearchQueryForm from '../components/ResearchQueryForm';
 import ApiStatusIndicator from '../components/ApiStatusIndicator';
 import WebSocketStatus from '../components/WebSocketStatus';
 import WorkflowProgress from '../components/WorkflowProgress';
+import AgentStatusDisplay from '../components/AgentStatusDisplay';
 import { ResearchQuery } from '../types/models';
 import { useApi } from '../hooks/useApi';
 import { useWorkflowWebSocket } from '../hooks/useWebSocket';
@@ -136,12 +137,15 @@ export default function Home() {
           <ResearchQueryForm onSubmit={handleSubmit} isSubmitting={submitState.loading} />
         </div>
 
-        {/* Workflow Progress */}
-        <WorkflowProgress 
-          workflowUpdates={workflowUpdates}
-          currentStatus={currentWorkflowStatus}
-          workflowId={currentWorkflowId || undefined}
-        />
+        {/* Agent Status and Workflow Progress */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 mb-12">
+          <AgentStatusDisplay />
+          <WorkflowProgress 
+            workflowUpdates={workflowUpdates}
+            currentStatus={currentWorkflowStatus}
+            workflowId={currentWorkflowId || undefined}
+          />
+        </div>
 
         {/* Agent Overview */}
         <div className="grid md:grid-cols-5 gap-4 mb-12">
