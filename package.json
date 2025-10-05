@@ -1,0 +1,16 @@
+{
+  "name": "quanta-ai-scientist",
+  "version": "1.0.0",
+  "description": "Multi-agent research system powered by Strands SDK",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "backend/venv/bin/python backend/run_dev.py",
+    "install:all": "npm install && cd frontend && npm install && python3 -m venv backend/venv && backend/venv/bin/pip install -r backend/requirements.txt",
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
