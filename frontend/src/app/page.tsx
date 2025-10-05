@@ -3,19 +3,38 @@
 import { useState, useEffect } from 'react';
 import ResearchQueryForm from '../components/ResearchQueryForm';
 import ApiStatusIndicator from '../components/ApiStatusIndicator';
+import WebSocketStatus from '../components/WebSocketStatus';
+import WorkflowProgress from '../components/WorkflowProgress';
 import { ResearchQuery } from '../types/models';
 import { useApi } from '../hooks/useApi';
+import { useWorkflowWebSocket } from '../hooks/useWebSocket';
 
 export default function Home() {
   const { submitResearchQuery, submitState, resetSubmitState } = useApi();
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null);
+  
+  // Generate a unique client ID for WebSocket connection
+  const [clientId] = useState(() => `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  
+  // WebSocket connection for real-time updates
+  const {
+    connectionState,
+    reconnectAttempts,
+    reconnect,
+    workflowUpdates,
+    currentWorkflowStatus,
+    clearWorkflowUpdates
+  } = useWorkflowWebSocket(clientId, currentWorkflowId || undefined);
 
   const handleSubmit = async (queryData: ResearchQuery) => {
     setSubmitSuccess(null);
     resetSubmitState();
+    clearWorkflowUpdates(); // Clear previous workflow updates
     
     try {
       const result = await submitResearchQuery(queryData);
+      setCurrentWorkflowId(result.workflow_id); // Set current workflow for WebSocket subscription
       setSubmitSuccess(`Workflow started successfully! ID: ${result.workflow_id}. Status: ${result.status}`);
       
       // Log successful submission for debugging
@@ -49,7 +68,14 @@ export default function Home() {
               </div>
               <h1 className="text-2xl font-bold text-white">Quanta</h1>
             </div>
-            <ApiStatusIndicator />
+            <div className="flex items-center space-x-6">
+              <ApiStatusIndicator />
+              <WebSocketStatus 
+                connectionState={connectionState}
+                reconnectAttempts={reconnectAttempts}
+                onReconnect={reconnect}
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -109,6 +135,13 @@ export default function Home() {
         <div className="mb-12">
           <ResearchQueryForm onSubmit={handleSubmit} isSubmitting={submitState.loading} />
         </div>
+
+        {/* Workflow Progress */}
+        <WorkflowProgress 
+          workflowUpdates={workflowUpdates}
+          currentStatus={currentWorkflowStatus}
+          workflowId={currentWorkflowId || undefined}
+        />
 
         {/* Agent Overview */}
         <div className="grid md:grid-cols-5 gap-4 mb-12">

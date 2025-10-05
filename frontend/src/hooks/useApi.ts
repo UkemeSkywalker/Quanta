@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ResearchQuery, WorkflowResult } from '../types/models';
+import { ResearchQuery } from '../types/models';
 
 // API response types
 export interface WorkflowResponse {

@@ -19,7 +19,7 @@ export interface ResearchQuery {
   query: string;
   user_id: string;
   priority?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AgentTask {
@@ -27,8 +27,8 @@ export interface AgentTask {
   agent_type: string;
   description: string;
   status: AgentStatus;
-  input_data: Record<string, any>;
-  output_data?: Record<string, any>;
+  input_data: Record<string, unknown>;
+  output_data?: Record<string, unknown>;
   dependencies?: string[];
   created_at: string;
   completed_at?: string;
@@ -38,7 +38,7 @@ export interface WorkflowResult {
   workflow_id: string;
   status: WorkflowStatus;
   tasks: AgentTask[];
-  final_results?: Record<string, any>;
+  final_results?: Record<string, unknown>;
   error_message?: string;
   progress_percentage: number;
 }
@@ -47,7 +47,7 @@ export interface A2AMessage {
   from_agent: string;
   to_agent: string;
   message_type: string;
-  content: Record<string, any>;
+  content: Record<string, unknown>;
   timestamp: string;
 }
 

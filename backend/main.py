@@ -31,6 +31,13 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, client_id: str):
         await websocket.accept()
         self.active_connections[client_id] = websocket
+        # Send connection confirmation
+        await self.send_status_update(client_id, {
+            "type": "connection",
+            "status": "connected",
+            "message": "WebSocket connection established",
+            "timestamp": asyncio.get_event_loop().time()
+        })
 
     def disconnect(self, client_id: str):
         if client_id in self.active_connections:
@@ -38,7 +45,40 @@ class ConnectionManager:
 
     async def send_personal_message(self, message: str, client_id: str):
         if client_id in self.active_connections:
-            await self.active_connections[client_id].send_text(message)
+            try:
+                await self.active_connections[client_id].send_text(message)
+            except Exception as e:
+                print(f"Error sending message to {client_id}: {e}")
+                self.disconnect(client_id)
+
+    async def send_status_update(self, client_id: str, update: Dict[str, Any]):
+        """Send structured status updates to client"""
+        if client_id in self.active_connections:
+            try:
+                message = json.dumps(update)
+                await self.active_connections[client_id].send_text(message)
+            except Exception as e:
+                print(f"Error sending status update to {client_id}: {e}")
+                self.disconnect(client_id)
+
+    async def broadcast_status(self, update: Dict[str, Any]):
+        """Broadcast status update to all connected clients"""
+        message = json.dumps(update)
+        disconnected_clients = []
+        
+        for client_id, websocket in self.active_connections.items():
+            try:
+                await websocket.send_text(message)
+            except Exception as e:
+                print(f"Error broadcasting to {client_id}: {e}")
+                disconnected_clients.append(client_id)
+        
+        # Clean up disconnected clients
+        for client_id in disconnected_clients:
+            self.disconnect(client_id)
+
+    def get_connection_count(self) -> int:
+        return len(self.active_connections)
 
 manager = ConnectionManager()
 
@@ -73,6 +113,19 @@ async def submit_research_query(query: ResearchQuery):
     
     workflow_id = f"workflow_{query.user_id}_{hash(query.query) % 10000}"
     
+    # Send real-time update to connected clients
+    await manager.broadcast_status({
+        "type": "workflow_started",
+        "workflow_id": workflow_id,
+        "status": "initiated",
+        "message": f"Research workflow started for query: {query.query[:50]}...",
+        "timestamp": asyncio.get_event_loop().time(),
+        "user_id": query.user_id
+    })
+    
+    # Start mock workflow simulation
+    asyncio.create_task(simulate_workflow_progress(workflow_id, query.user_id))
+    
     return WorkflowResponse(
         workflow_id=workflow_id,
         status="initiated",
@@ -90,16 +143,107 @@ async def get_workflow_status(workflow_id: str):
         "message": "Research agent is discovering data sources..."
     }
 
+@app.get("/api/websocket/status")
+async def websocket_status():
+    """Get WebSocket connection status"""
+    return {
+        "active_connections": manager.get_connection_count(),
+        "status": "operational",
+        "endpoint": "/ws/{client_id}"
+    }
+
+async def simulate_workflow_progress(workflow_id: str, user_id: str):
+    """Simulate workflow progress for testing WebSocket functionality"""
+    agents = [
+        {"name": "Research", "duration": 3, "message": "Discovering data sources and research papers"},
+        {"name": "Data", "duration": 4, "message": "Processing and analyzing collected data"},
+        {"name": "Experiment", "duration": 5, "message": "Running experiments and hypothesis testing"},
+        {"name": "Critic", "duration": 3, "message": "Validating results and methodology"},
+        {"name": "Visualization", "duration": 2, "message": "Generating charts and final report"}
+    ]
+    
+    total_agents = len(agents)
+    
+    for i, agent in enumerate(agents):
+        # Agent started
+        await manager.broadcast_status({
+            "type": "agent_status",
+            "workflow_id": workflow_id,
+            "agent_name": agent["name"],
+            "status": "processing",
+            "message": agent["message"],
+            "progress_percentage": (i / total_agents) * 100,
+            "timestamp": asyncio.get_event_loop().time(),
+            "user_id": user_id
+        })
+        
+        # Simulate processing time
+        await asyncio.sleep(agent["duration"])
+        
+        # Agent completed
+        await manager.broadcast_status({
+            "type": "agent_status",
+            "workflow_id": workflow_id,
+            "agent_name": agent["name"],
+            "status": "completed",
+            "message": f"{agent['name']} agent completed successfully",
+            "progress_percentage": ((i + 1) / total_agents) * 100,
+            "timestamp": asyncio.get_event_loop().time(),
+            "user_id": user_id
+        })
+    
+    # Workflow completed
+    await manager.broadcast_status({
+        "type": "workflow_completed",
+        "workflow_id": workflow_id,
+        "status": "completed",
+        "message": "Research workflow completed successfully",
+        "progress_percentage": 100,
+        "timestamp": asyncio.get_event_loop().time(),
+        "user_id": user_id,
+        "results": {
+            "summary": "Mock research workflow completed with all 5 agents",
+            "agents_completed": total_agents,
+            "total_duration": sum(agent["duration"] for agent in agents)
+        }
+    })
+
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
     await manager.connect(websocket, client_id)
     try:
         while True:
+            # Listen for client messages
             data = await websocket.receive_text()
-            # Echo back for now - will be replaced with actual workflow updates
-            await manager.send_personal_message(f"Received: {data}", client_id)
+            try:
+                message = json.loads(data)
+                
+                # Handle different message types
+                if message.get("type") == "ping":
+                    await manager.send_status_update(client_id, {
+                        "type": "pong",
+                        "timestamp": asyncio.get_event_loop().time()
+                    })
+                elif message.get("type") == "subscribe":
+                    # Client subscribing to workflow updates
+                    workflow_id = message.get("workflow_id")
+                    await manager.send_status_update(client_id, {
+                        "type": "subscription_confirmed",
+                        "workflow_id": workflow_id,
+                        "message": f"Subscribed to updates for workflow {workflow_id}",
+                        "timestamp": asyncio.get_event_loop().time()
+                    })
+                else:
+                    # Echo unknown messages
+                    await manager.send_personal_message(f"Received: {data}", client_id)
+                    
+            except json.JSONDecodeError:
+                # Handle plain text messages
+                await manager.send_personal_message(f"Received: {data}", client_id)
+                
     except WebSocketDisconnect:
         manager.disconnect(client_id)
+        print(f"Client {client_id} disconnected")
 
 if __name__ == "__main__":
     import uvicorn
