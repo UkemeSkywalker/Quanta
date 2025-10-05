@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict, Any
 from enum import Enum
 
@@ -16,10 +16,26 @@ class AgentStatus(str, Enum):
     ERROR = "error"
 
 class ResearchQuery(BaseModel):
-    query: str
-    user_id: str
-    priority: int = 1
+    query: str = Field(..., min_length=10, max_length=1000, description="Research query must be between 10 and 1000 characters")
+    user_id: str = Field(..., min_length=1, description="User ID is required")
+    priority: int = Field(default=1, ge=1, le=5, description="Priority must be between 1 and 5")
     metadata: Optional[Dict[str, Any]] = None
+
+    @validator('query')
+    def validate_query(cls, v):
+        if not v.strip():
+            raise ValueError('Query cannot be empty or only whitespace')
+        # Check for basic research keywords to ensure it's a meaningful query
+        research_indicators = ['analyze', 'study', 'research', 'investigate', 'examine', 'explore', 'compare', 'evaluate', 'assess', 'what', 'how', 'why', 'when', 'where']
+        if not any(indicator in v.lower() for indicator in research_indicators):
+            raise ValueError('Query should contain research-oriented language (e.g., analyze, study, investigate, etc.)')
+        return v.strip()
+
+    @validator('user_id')
+    def validate_user_id(cls, v):
+        if not v.strip():
+            raise ValueError('User ID cannot be empty')
+        return v.strip()
 
 class AgentTask(BaseModel):
     task_id: str

@@ -7,7 +7,7 @@
   - Create basic landing page with modern design
   - _Requirements: 1.1, 8.1_
 
-- [ ] 2. Implement core data models and validation
+- [x] 2. Implement core data models and validation
   - Create Pydantic models for ResearchQuery, WorkflowResult, AgentTask
   - Implement TypeScript interfaces matching backend models
   - Add input validation for research queries

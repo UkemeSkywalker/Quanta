@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import ResearchQueryForm from '../components/ResearchQueryForm';
+import { ResearchQuery } from '../types/models';
 
 export default function Home() {
-  const [query, setQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-    
+  const handleSubmit = async (queryData: ResearchQuery) => {
     setIsSubmitting(true);
+    setSubmitSuccess(null);
+    setSubmitError(null);
     
     try {
       const response = await fetch('http://localhost:8000/api/research/submit', {
@@ -18,22 +20,18 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          query: query.trim(),
-          user_id: 'demo_user',
-          priority: 1
-        }),
+        body: JSON.stringify(queryData),
       });
       
       if (response.ok) {
         const result = await response.json();
-        alert(`Workflow started! ID: ${result.workflow_id}`);
-        setQuery('');
+        setSubmitSuccess(`Workflow started successfully! ID: ${result.workflow_id}`);
       } else {
-        alert('Failed to submit research query');
+        const errorData = await response.json().catch(() => ({}));
+        setSubmitError(errorData.detail || 'Failed to submit research query');
       }
-    } catch {
-      alert('Error connecting to backend');
+    } catch (error) {
+      setSubmitError('Error connecting to backend. Please ensure the server is running.');
     } finally {
       setIsSubmitting(false);
     }
@@ -64,7 +62,7 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h2 className="text-5xl font-bold text-white mb-6 leading-tight">
-            AI-Powered Research
+            AI-Powered Research Lab
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
               Automation Platform
             </span>
@@ -75,38 +73,28 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Research Query Form */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-8 mb-12">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="research-query" className="block text-sm font-medium text-gray-300 mb-3">
-                Research Query
-              </label>
-              <textarea
-                id="research-query"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Enter your research question or hypothesis..."
-                className="w-full px-4 py-3 bg-black/20 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-                rows={4}
-                disabled={isSubmitting}
-              />
+        {/* Success/Error Messages */}
+        {submitSuccess && (
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <span className="text-green-400 mr-2">✅</span>
+              <p className="text-green-300">{submitSuccess}</p>
             </div>
-            <button
-              type="submit"
-              disabled={!query.trim() || isSubmitting}
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Initiating Research...</span>
-                </div>
-              ) : (
-                'Start Research Workflow'
-              )}
-            </button>
-          </form>
+          </div>
+        )}
+        
+        {submitError && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <span className="text-red-400 mr-2">❌</span>
+              <p className="text-red-300">{submitError}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Research Query Form */}
+        <div className="mb-12">
+          <ResearchQueryForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
         </div>
 
         {/* Agent Overview */}

@@ -1,9 +1,10 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from typing import Dict, Any, Optional
 import json
 import asyncio
+from models import ResearchQuery, WorkflowResult, WorkflowStatus
 
 app = FastAPI(title="Quanta AI Scientist API", version="1.0.0")
 
@@ -16,13 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Data models
-class ResearchQuery(BaseModel):
-    query: str
-    user_id: str
-    priority: int = 1
-    metadata: Optional[Dict[str, Any]] = None
-
+# Response models
 class WorkflowResponse(BaseModel):
     workflow_id: str
     status: str
@@ -57,7 +52,9 @@ async def health_check():
 
 @app.post("/api/research/submit", response_model=WorkflowResponse)
 async def submit_research_query(query: ResearchQuery):
-    # Basic implementation for now
+    # The Pydantic model will automatically validate the input
+    # If validation fails, FastAPI will return a 422 error with details
+    
     workflow_id = f"workflow_{query.user_id}_{hash(query.query) % 10000}"
     
     return WorkflowResponse(
