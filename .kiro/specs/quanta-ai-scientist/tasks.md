@@ -14,7 +14,7 @@
   - Create basic form component with validation feedback
   - _Requirements: 1.2, 8.2_
 
-- [ ] 3. Create basic API endpoints and frontend integration
+- [x] 3. Create basic API endpoints and frontend integration
   - Implement FastAPI endpoint for research query submission
   - Create React hook for API communication
   - Add loading states and success/error feedback in UI

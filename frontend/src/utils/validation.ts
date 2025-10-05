@@ -16,7 +16,7 @@ export const validateResearchQuery = (query: Partial<ResearchQuery>): FormValida
     // Check for research-oriented language
     const researchIndicators = ['analyze', 'study', 'research', 'investigate', 'examine', 'explore', 'compare', 'evaluate', 'assess', 'what', 'how', 'why', 'when', 'where'];
     if (!researchIndicators.some(indicator => query.query!.toLowerCase().includes(indicator))) {
-      errors.push({ field: 'query', message: 'Query should contain research-oriented language (e.g., analyze, study, investigate, etc.)' });
+      errors.push({ field: 'query', message: 'Query should contain research-oriented language (e.g., analyze, study, investigate, examine, explore, compare, evaluate, assess, what, how, why, when, where etc.)' });
     }
   }
 

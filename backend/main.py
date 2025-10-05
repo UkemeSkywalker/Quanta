@@ -50,6 +50,22 @@ async def root():
 async def health_check():
     return {"status": "healthy", "service": "quanta-api"}
 
+@app.get("/api/info")
+async def api_info():
+    return {
+        "service": "Quanta AI Scientist API",
+        "version": "1.0.0",
+        "description": "Multi-agent research system powered by Strands SDK",
+        "endpoints": {
+            "health": "GET /health - Health check",
+            "submit_research": "POST /api/research/submit - Submit research query",
+            "workflow_status": "GET /api/workflow/{workflow_id}/status - Get workflow status",
+            "websocket": "WS /ws/{client_id} - Real-time updates",
+            "api_info": "GET /api/info - This endpoint"
+        },
+        "agents": ["Research", "Data", "Experiment", "Critic", "Visualization"]
+    }
+
 @app.post("/api/research/submit", response_model=WorkflowResponse)
 async def submit_research_query(query: ResearchQuery):
     # The Pydantic model will automatically validate the input
@@ -62,6 +78,17 @@ async def submit_research_query(query: ResearchQuery):
         status="initiated",
         message=f"Research workflow started for query: {query.query[:50]}..."
     )
+
+@app.get("/api/workflow/{workflow_id}/status")
+async def get_workflow_status(workflow_id: str):
+    # Mock workflow status for now - will be replaced with actual workflow tracking
+    return {
+        "workflow_id": workflow_id,
+        "status": "running",
+        "progress_percentage": 25.0,
+        "current_agent": "research",
+        "message": "Research agent is discovering data sources..."
+    }
 
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):

@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:api": "node -e \"import('./src/test/api-integration.test.js').then(m => m.runAllTests())\""
   },
   "dependencies": {
     "react": "19.1.0",

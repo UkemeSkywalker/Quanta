@@ -1,41 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ResearchQueryForm from '../components/ResearchQueryForm';
+import ApiStatusIndicator from '../components/ApiStatusIndicator';
 import { ResearchQuery } from '../types/models';
+import { useApi } from '../hooks/useApi';
 
 export default function Home() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { submitResearchQuery, submitState, resetSubmitState } = useApi();
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = async (queryData: ResearchQuery) => {
-    setIsSubmitting(true);
     setSubmitSuccess(null);
-    setSubmitError(null);
+    resetSubmitState();
     
     try {
-      const response = await fetch('http://localhost:8000/api/research/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(queryData),
-      });
+      const result = await submitResearchQuery(queryData);
+      setSubmitSuccess(`Workflow started successfully! ID: ${result.workflow_id}. Status: ${result.status}`);
       
-      if (response.ok) {
-        const result = await response.json();
-        setSubmitSuccess(`Workflow started successfully! ID: ${result.workflow_id}`);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setSubmitError(errorData.detail || 'Failed to submit research query');
-      }
+      // Log successful submission for debugging
+      console.log('Research workflow submitted:', {
+        workflow_id: result.workflow_id,
+        status: result.status,
+        query: queryData.query.substring(0, 50) + '...'
+      });
     } catch (error) {
-      setSubmitError('Error connecting to backend. Please ensure the server is running.');
-    } finally {
-      setIsSubmitting(false);
+      // Error is already handled by the hook and stored in submitState.error
+      console.error('Submit error:', error);
     }
   };
+
+  // Clear success message when starting new submission
+  useEffect(() => {
+    if (submitState.loading) {
+      setSubmitSuccess(null);
+    }
+  }, [submitState.loading]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-black">
@@ -49,10 +49,7 @@ export default function Home() {
               </div>
               <h1 className="text-2xl font-bold text-white">Quanta</h1>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm text-gray-300">System Online</span>
-            </div>
+            <ApiStatusIndicator />
           </div>
         </div>
       </header>
@@ -76,25 +73,41 @@ export default function Home() {
         {/* Success/Error Messages */}
         {submitSuccess && (
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <span className="text-green-400 mr-2">✅</span>
-              <p className="text-green-300">{submitSuccess}</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="text-green-400 mr-2">✅</span>
+                <p className="text-green-300">{submitSuccess}</p>
+              </div>
+              <button
+                onClick={() => setSubmitSuccess(null)}
+                className="text-green-400 hover:text-green-300 transition-colors"
+              >
+                ✕
+              </button>
             </div>
           </div>
         )}
         
-        {submitError && (
+        {submitState.error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <span className="text-red-400 mr-2">❌</span>
-              <p className="text-red-300">{submitError}</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="text-red-400 mr-2">❌</span>
+                <p className="text-red-300">{submitState.error}</p>
+              </div>
+              <button
+                onClick={resetSubmitState}
+                className="text-red-400 hover:text-red-300 transition-colors"
+              >
+                ✕
+              </button>
             </div>
           </div>
         )}
 
         {/* Research Query Form */}
         <div className="mb-12">
-          <ResearchQueryForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+          <ResearchQueryForm onSubmit={handleSubmit} isSubmitting={submitState.loading} />
         </div>
 
         {/* Agent Overview */}

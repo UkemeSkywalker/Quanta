@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ResearchQuery, ValidationError } from '../types/models';
 import { validateResearchQuery, getFieldError } from '../utils/validation';
+import LoadingSpinner from './LoadingSpinner';
 
 interface ResearchQueryFormProps {
   onSubmit: (query: ResearchQuery) => Promise<void>;
@@ -152,15 +153,18 @@ export default function ResearchQueryForm({ onSubmit, isSubmitting }: ResearchQu
         <button
           type="submit"
           disabled={isSubmitting || errors.length > 0}
-          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 disabled:cursor-not-allowed"
+          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
         >
           {isSubmitting ? (
             <div className="flex items-center justify-center space-x-2">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              <LoadingSpinner size="sm" color="white" />
               <span>Initiating Research...</span>
             </div>
           ) : (
-            'Start Research Workflow'
+            <div className="flex items-center justify-center space-x-2">
+              <span>🚀</span>
+              <span>Start Research Workflow</span>
+            </div>
           )}
         </button>
 

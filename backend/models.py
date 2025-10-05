@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
 from enum import Enum
 
@@ -21,7 +21,8 @@ class ResearchQuery(BaseModel):
     priority: int = Field(default=1, ge=1, le=5, description="Priority must be between 1 and 5")
     metadata: Optional[Dict[str, Any]] = None
 
-    @validator('query')
+    @field_validator('query')
+    @classmethod
     def validate_query(cls, v):
         if not v.strip():
             raise ValueError('Query cannot be empty or only whitespace')
@@ -31,7 +32,8 @@ class ResearchQuery(BaseModel):
             raise ValueError('Query should contain research-oriented language (e.g., analyze, study, investigate, etc.)')
         return v.strip()
 
-    @validator('user_id')
+    @field_validator('user_id')
+    @classmethod
     def validate_user_id(cls, v):
         if not v.strip():
             raise ValueError('User ID cannot be empty')
